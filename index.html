@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云端就餐决策系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3498db;
+            --primary-dark: #2980b9;
+            --success: #2ecc71;
+            --success-dark: #27ae60;
+            --danger: #e74c3c;
+            --danger-dark: #c0392b;
+            --warning: #f39c12;
+            --warning-dark: #d35400;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --gold: #FFD700;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+            min-height: auto;
+        }
+
+        header {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,100 0,100" fill="rgba(255,255,255,0.1)" /></svg>');
+            background-size: cover;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .connection-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-right: 8px;
+            transition: var(--transition);
+        }
+
+        .connection-dot.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        #connection-status {
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 10px 0;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+
+        .last-reset {
+            background: rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: #f1f8ff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        @media (min-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .panel-title i {
+            font-size: 1.8rem;
+            margin-right: 15px;
+            color: var(--primary);
+        }
+
+        .panel-title h2 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .members-container, .options-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .member-card, .option-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 10px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+
+        .member-card:hover, .option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .member-card.selected {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+
+        .member-card.completed {
+            border-color: var(--success);
+            background: #e8f5e9;
+        }
+
+        .member-id, .option-id {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: var(--primary);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .member-name, .option-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 10px 0 5px;
+        }
+
+        .option-card.feast .option-name {
+            color: var(--gold);
+            font-weight: bold;
+            text-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+
+        .member-status {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .edit-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .option-card.want {
+            border-color: var(--success);
+            background: #e8f5e9;
+        }
+
+        .option-card.dont-want {
+            border-color: var(--danger);
+            background: #ffebee;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn i {
+            font-size: 1.1rem;
+        }
+
+        .btn-save {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-save:hover:not(:disabled) {
+            background: var(--success-dark);
+        }
+
+        .btn-clear {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-clear:hover:not(:disabled) {
+            background: var(--warning-dark);
+        }
+
+        .btn-refresh {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-refresh:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+
+        .btn-calculate {
+            background: linear-gradient(to right, #3498db, #9b59b6);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            margin: 20px 0;
+        }
+
+        .btn-calculate:hover:not(:disabled) {
+            background: linear-gradient(to right, #2980b9, #8e44ad);
+            transform: scale(1.02);
+        }
+
+        .btn-reset {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            position: absolute;
+            top: 15px;
+            left: 20px;
+        }
+
+        .btn-reset:hover {
+            background: linear-gradient(to right, #c0392b, #a5271a);
+        }
+
+        .sync-status {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .cloud-icon {
+            color: var(--primary);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results-container {
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .no-result {
+            text-align: center;
+            color: #777;
+        }
+
+        .result-section {
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        .result-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.3rem;
+        }
+
+        .acceptable-icon {
+            background: #e8f5e9;
+            color: var(--success);
+        }
+
+        .best-icon {
+            background: #fff8e1;
+            color: var(--gold);
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .result-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .result-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary);
+        }
+
+        .result-best-item {
+            border-left: 4px solid var(--gold);
+            background: #fffde7;
+        }
+
+        .result-item-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            padding: 20px;
+            text-align: center;
+            background: #f1f8ff;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .celebration-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .celebration-content {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .celebration-content::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .celebration-title {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            color: var(--gold);
+        }
+
+        .host-name {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--gold);
+            text-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
+
+        .celebration-subtitle {
+            font-size: 2.8rem;
+            margin: 30px 0;
+            color: white;
+            text-shadow: 0 0 10px var(--gold);
+        }
+
+        .celebration-message {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        .close-btn {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .close-btn:hover {
+            background: #ffcc00;
+            transform: scale(1.05);
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f00;
+            border-radius: 50%;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .feast-selected {
+            animation: pulse 1s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: var(--dark);
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .password-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .modal-confirm {
+            background: var(--success);
+            color: white;
+        }
+
+        .modal-confirm:hover {
+            background: var(--success-dark);
+        }
+
+        .modal-cancel {
+            background: var(--danger);
+            color: white;
+        }
+
+        .modal-cancel:hover {
+            background: var(--danger-dark);
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .members-container, .options-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .celebration-title {
+                font-size: 2.5rem;
+            }
+            
+            .celebration-subtitle {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="btn btn-reset" id="reset-btn">
+                <i class="fas fa-lock"></i> 重置系统
+            </button>
+            <div class="connection-status">
+                <div class="connection-dot" id="connection-dot"></div>
+                <span id="connection-status">连接中...</span>
+            </div>
+            <h1>云端就餐决策系统</h1>
+            <p class="subtitle">多设备实时同步 · 每人仅一次选择 · 智能推荐</p>
+            <div class="last-reset">每日上午8点自动重置数据</div>
+        </header>
+        
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="participants-count">0</div>
+                <div class="stat-label">已参与人数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="today-date">--</div>
+                <div class="stat-label">当前日期</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="next-reset">--</div>
+                <div class="stat-label">下次重置</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="sync-status">--</div>
+                <div class="stat-label">同步状态</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-users"></i>
+                    <h2>选择成员 (仅一次)</h2>
+                </div>
+                <div class="members-container" id="members-container">
+                    <!-- 成员列表由JS生成 -->
+                </div>
+                
+                <div class="panel-title" style="margin-top: 30px;">
+                    <i class="fas fa-utensils"></i>
+                    <h2>选择就餐选项</h2>
+                </div>
+                <div class="options-container" id="options-container">
+                    <!-- 选项列表由JS生成 -->
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-clear" id="clear-btn">
+                        <i class="fas fa-eraser"></i> 清空选择
+                    </button>
+                    <button class="btn btn-save" id="save-btn">
+                        <i class="fas fa-save"></i> 保存选择
+                    </button>
+                    <button class="btn btn-refresh" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> 刷新数据
+                    </button>
+                </div>
+                <div class="sync-status">
+                    <i class="fas fa-cloud-upload-alt cloud-icon"></i>
+                    <span id="last-sync">从未同步</span>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-chart-bar"></i>
+                    <h2>决策结果</h2>
+                </div>
+                
+                <button class="btn btn-calculate" id="calculate-btn">
+                    <i class="fas fa-calculator"></i> 计算推荐结果
+                </button>
+                
+                <div class="results-container" id="results-container">
+                    <div class="no-result">
+                        <i class="fas fa-info-circle" style="font-size: 3rem; margin-bottom: 15px; color: #ccc;"></i>
+                        <p>请选择成员并完成投票后点击"计算推荐结果"</p>
+                    </div>
+                </div>
+                <div class="sync-status">
+                    <i class="fas fa-sync-alt cloud-icon"></i>
+                    <span>数据同步间隔: <span id="sync-interval">30</span>秒</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>系统说明：绿色选项表示想吃，红色选项表示不想吃。最优推荐是所有人都能接受且最多人想吃的选项。</p>
+            <p>两人以上参与即可计算，数据实时同步，每日上午8点自动重置</p>
+        </div>
+    </div>
+
+    <script>
+        // ===================== 配置区域 =====================
+        // 在这里设置您的JSONBin.io凭证
+        const JSONBIN_CONFIG = {
+            binId: "685b7ac98561e97a502b4a34",     // 替换为您的实际Bin ID
+            apiKey: "$2a$10$sDoOfZ2iBCv4Xz8nlG1kyu/fOFYLxFnS6MQJGoL9QfuCLnJSNCqGq",   // 替换为您的实际API Key
+            apiUrl: "https://api.jsonbin.io/v3/b"
+        };
+        // ===================== 配置区域结束 =====================
+        
+        // 成员列表
+        const members = [
+            { id: 1, name: "大傻春" },
+            { id: 2, name: "Salary" },
+            { id: 3, name: "阿来恩" },
+            { id: 4, name: "妈妈" },
+            { id: 5, name: "麻旻韬" },
+            { id: 6, name: "夏！" }
+        ];
+        
+        // 选项列表 - 新增"大宴群臣！"选项
+        const options = [
+            { id: 11, name: "大宴群臣！" },
+            { id: 1, name: "白水洋" },
+            { id: 2, name: "鸡" },
+            { id: 3, name: "拌" },
+            { id: 4, name: "食堂" },
+            { id: 5, name: "鱼" },
+            { id: 6, name: "杂" },
+            { id: 7, name: "元初" },
+            { id: 8, name: "饺" },
+            { id: 9, name: "卤" },
+            { id: 10, name: "单飞" }
+        ];
+        
+        // 全局状态
+        let state = {
+            currentMember: null,
+            selectedMember: null, // 当前选定的成员（一旦选定无法更改）
+            selections: {},
+            participants: 0,
+            today: getTodayDate(),
+            lastSync: null,
+            connected: false,
+            syncTimer: null,
+            feastHost: null // 记录选择"大宴群臣"的成员
+        };
+        
+        // 设备标识（用于识别设备）
+        const deviceId = localStorage.getItem('deviceId') || generateDeviceId();
+        localStorage.setItem('deviceId', deviceId);
+        
+        // 生成设备ID
+        function generateDeviceId() {
+            return 'device-' + Math.random().toString(36).substr(2, 9) + 
+                   '-' + Date.now().toString(36);
+        }
+        
+        // 获取今日日期字符串
+        function getTodayDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // 初始化应用
+        async function initApp() {
+            // 初始化日期显示
+            document.getElementById('today-date').textContent = state.today;
+            updateResetTime();
+            
+            // 渲染成员列表
+            renderMembers();
+            
+            // 渲染选项列表
+            renderOptions();
+            
+            // 添加事件监听器
+            document.getElementById('save-btn').addEventListener('click', saveSelection);
+            document.getElementById('clear-btn').addEventListener('click', clearSelection);
+            document.getElementById('calculate-btn').addEventListener('click', calculateResults);
+            document.getElementById('refresh-btn').addEventListener('click', loadCloudData);
+            document.getElementById('reset-btn').addEventListener('click', showPasswordModal);
+            
+            // 更新参与人数
+            updateParticipantsCount();
+            
+            // 加载云端数据
+            await loadCloudData();
+            startSyncTimer();
+        }
+        
+        // 显示密码输入框
+        function showPasswordModal() {
+            const modal = document.createElement('div');
+            modal.className = 'password-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3><i class="fas fa-lock"></i> 重置系统</h3>
+                    <p>请输入密码以重置所有人的选择</p>
+                    <input type="password" class="password-input" id="password-input" placeholder="输入密码">
+                    <div class="modal-buttons">
+                        <button class="modal-btn modal-cancel" id="cancel-btn">取消</button>
+                        <button class="modal-btn modal-confirm" id="confirm-btn">确认</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加事件监听
+            document.getElementById('cancel-btn').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            document.getElementById('confirm-btn').addEventListener('click', () => {
+                const password = document.getElementById('password-input').value;
+                if (password === '32138') {
+                    resetAllSelections();
+                    document.body.removeChild(modal);
+                } else {
+                    alert('密码错误！');
+                }
+            });
+        }
+        
+        // 重置所有选择
+        async function resetAllSelections() {
+            if (!confirm('确定要重置所有人的选择吗？此操作不可撤销！')) return;
+            
+            try {
+                // 重置本地状态
+                state.selections = {};
+                state.participants = 0;
+                state.feastHost = null;
+                state.selectedMember = null;
+                
+                // 清除设备选定的成员
+                localStorage.removeItem(`selectedMember_${deviceId}`);
+                
+                // 保存到云端
+                await saveToCloud();
+                
+                // 更新UI
+                updateParticipantsCount();
+                renderMembers();
+                renderOptions();
+                
+                alert('系统已重置！');
+            } catch (error) {
+                console.error("重置失败:", error);
+                alert(`重置失败: ${error.message}`);
+            }
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus() {
+            const dot = document.getElementById('connection-dot');
+            const status = document.getElementById('connection-status');
+            
+            if (state.connected) {
+                dot.className = 'connection-dot connected';
+                status.textContent = '云端已连接';
+                document.getElementById('sync-status').textContent = '在线';
+            } else {
+                dot.className = 'connection-dot';
+                status.textContent = '云端未连接';
+                document.getElementById('sync-status').textContent = '离线';
+            }
+        }
+        
+        // 从云端加载数据
+        async function loadCloudData() {
+            try {
+                state.connected = false;
+                updateConnectionStatus();
+                
+                // 显示加载状态
+                document.getElementById('last-sync').innerHTML = '<span class="loading-spinner"></span> 加载中...';
+                
+                // 从JSONBin.io获取数据
+                const response = await fetch(`${JSONBIN_CONFIG.apiUrl}/${JSONBIN_CONFIG.binId}/latest`, {
+                    headers: {
+                        'X-Master-Key': JSONBIN_CONFIG.apiKey,
+                        'X-Bin-Meta': 'false'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`网络响应异常: ${response.status}`);
+                }
+                
+                const cloudData = await response.json();
+                
+                // 检查数据是否过期（非今日数据）
+                if (cloudData.today !== state.today) {
+                    // 重置数据
+                    state.selections = {};
+                    state.participants = 0;
+                    state.feastHost = null;
+                    
+                    // 保存重置后的数据到云端
+                    await saveToCloud();
+                } else {
+                    // 更新状态
+                    state.selections = cloudData.selections || {};
+                    state.participants = cloudData.participants || 0;
+                    state.feastHost = cloudData.feastHost || null;
+                }
+                
+                state.connected = true;
+                updateConnectionStatus();
+                
+                // 更新同步时间
+                state.lastSync = new Date();
+                document.getElementById('last-sync').textContent = 
+                    `最后同步: ${state.lastSync.toLocaleTimeString()}`;
+                
+                // 更新UI
+                updateParticipantsCount();
+                renderMembers();
+                renderOptions();
+                
+                // 检查设备是否已经选择过成员
+                const selectedMember = localStorage.getItem(`selectedMember_${deviceId}`);
+                if (selectedMember) {
+                    state.selectedMember = parseInt(selectedMember);
+                    state.currentMember = state.selectedMember;
+                    renderMembers();
+                    renderOptions();
+                }
+                
+                return true;
+            } catch (error) {
+                console.error("加载云端数据失败:", error);
+                state.connected = false;
+                updateConnectionStatus();
+                document.getElementById('last-sync').textContent = "同步失败";
+                alert(`无法加载云端数据: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // 保存数据到云端
+        async function saveToCloud() {
+            try {
+                // 显示保存状态
+                document.getElementById('last-sync').innerHTML = '<span class="loading-spinner"></span> 保存中...';
+                
+                // 准备要保存的数据
+                const saveData = {
+                    selections: state.selections,
+                    participants: state.participants,
+                    today: state.today,
+                    feastHost: state.feastHost
+                };
+                
+                // 保存到JSONBin.io
+                const response = await fetch(`${JSONBIN_CONFIG.apiUrl}/${JSONBIN_CONFIG.binId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_CONFIG.apiKey
+                    },
+                    body: JSON.stringify(saveData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`保存失败: ${response.status}`);
+                }
+                
+                state.lastSync = new Date();
+                document.getElementById('last-sync').textContent = 
+                    `最后同步: ${state.lastSync.toLocaleTimeString()}`;
+                
+                return true;
+            } catch (error) {
+                console.error("保存到云端失败:", error);
+                document.getElementById('last-sync').textContent = "保存失败";
+                alert(`无法保存到云端: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // 启动同步定时器
+        function startSyncTimer() {
+            if (state.syncTimer) {
+                clearInterval(state.syncTimer);
+            }
+            
+            const interval = 30 * 1000;
+            document.getElementById('sync-interval').textContent = 30;
+            
+            state.syncTimer = setInterval(async () => {
+                await loadCloudData();
+            }, interval);
+        }
+        
+        // 更新重置时间
+        function updateResetTime() {
+            const now = new Date();
+            const nextReset = new Date(now);
+            
+            // 如果当前时间早于8点，则重置时间为当天8点，否则为第二天8点
+            if (now.getHours() < 8) {
+                nextReset.setHours(8, 0, 0, 0);
+            } else {
+                nextReset.setDate(nextReset.getDate() + 1);
+                nextReset.setHours(8, 0, 0, 0);
+            }
+            
+            const hours = nextReset.getHours().toString().padStart(2, '0');
+            const minutes = nextReset.getMinutes().toString().padStart(2, '0');
+            document.getElementById('next-reset').textContent = `${hours}:${minutes}`;
+        }
+        
+        // 渲染成员列表
+        function renderMembers() {
+            const container = document.getElementById('members-container');
+            container.innerHTML = '';
+            
+            members.forEach(member => {
+                const card = document.createElement('div');
+                card.className = `member-card ${state.selectedMember === member.id ? 'selected' : ''}`;
+                
+                // 检查该成员是否已完成选择
+                const hasSelection = state.selections[member.id] !== undefined;
+                if (hasSelection) {
+                    card.classList.add('completed');
+                }
+                
+                card.innerHTML = `
+                    <div class="member-id">${member.id}</div>
+                    <div class="member-name">${member.name}</div>
+                    <div class="member-status">${hasSelection ? '已完成' : '未选择'}</div>
+                    ${hasSelection ? '<i class="fas fa-edit edit-icon" title="编辑选择"></i>' : ''}
+                `;
+                
+                // 添加编辑图标点击事件
+                if (hasSelection) {
+                    const editIcon = card.querySelector('.edit-icon');
+                    editIcon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectMember(member.id);
+                    });
+                }
+                
+                // 如果设备已经选定成员，禁用其他成员的点击
+                const deviceSelectedMember = localStorage.getItem(`selectedMember_${deviceId}`);
+                if (deviceSelectedMember) {
+                    if (deviceSelectedMember != member.id) {
+                        card.style.cursor = 'default';
+                        card.style.opacity = '0.7';
+                        card.addEventListener('click', null);
+                    } else {
+                        card.addEventListener('click', () => selectMember(member.id));
+                    }
+                } else {
+                    card.addEventListener('click', () => selectMember(member.id));
+                }
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // 选择成员
+        function selectMember(memberId) {
+            // 如果设备已经选定成员，不允许再选
+            const deviceSelectedMember = localStorage.getItem(`selectedMember_${deviceId}`);
+            if (deviceSelectedMember && deviceSelectedMember != memberId) {
+                alert('每个设备只能选择一个成员！');
+                return;
+            }
+            
+            // 如果还没有选定成员，则设定当前成员
+            if (!state.selectedMember) {
+                state.selectedMember = memberId;
+            }
+            
+            // 记录设备选择的成员
+            localStorage.setItem(`selectedMember_${deviceId}`, memberId);
+            
+            // 只能编辑当前选定的成员
+            state.currentMember = memberId;
+            renderMembers();
+            renderOptions();
+        }
+        
+        // 渲染选项列表
+        function renderOptions() {
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            if (!state.currentMember) return;
+            
+            // 检查该成员是否已经提交过选择
+            const memberCompleted = state.selections[state.currentMember] && 
+                                   state.selections[state.currentMember].submitted;
+            
+            // 如果已经有人选择了"大宴群臣"，显示庆祝信息
+            if (state.feastHost) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px; color: #777;">
+                        <i class="fas fa-crown" style="font-size: 3rem; margin-bottom: 15px; color: var(--gold);"></i>
+                        <h3>${members.find(m => m.id == state.feastHost).name}选择了"大宴群臣！"</h3>
+                        <p>今日无需选择，等待开宴！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (memberCompleted) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px; color: #777;">
+                        <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 15px; color: #28a745;"></i>
+                        <h3>您已提交选择</h3>
+                        <p>点击"编辑"图标可修改选择</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const memberSelections = state.selections[state.currentMember] || {};
+            
+            options.forEach(option => {
+                const status = memberSelections[option.id] || 0; // 0: 未选, 1: 想吃, -1: 不想吃
+                
+                const card = document.createElement('div');
+                card.className = `option-card ${status === 1 ? 'want' : status === -1 ? 'dont-want' : ''}`;
+                
+                // 为"大宴群臣"添加特殊样式
+                if (option.id === 11) {
+                    card.classList.add('feast');
+                }
+                
+                card.dataset.id = option.id;
+                
+                card.innerHTML = `
+                    <div class="option-id">${option.id}</div>
+                    <div class="option-name">${option.name}</div>
+                `;
+                
+                card.addEventListener('click', () => toggleOption(option.id));
+                container.appendChild(card);
+            });
+        }
+        
+        // 切换选项状态
+        function toggleOption(optionId) {
+            if (!state.currentMember) return;
+            
+            if (!state.selections[state.currentMember]) {
+                state.selections[state.currentMember] = {};
+            }
+            
+            const currentStatus = state.selections[state.currentMember][optionId] || 0;
+            let newStatus = 0;
+            
+            // 状态循环: 未选择 -> 想吃 -> 不想吃 -> 未选择
+            if (currentStatus === 0) {
+                newStatus = 1;
+            } else if (currentStatus === 1) {
+                newStatus = -1;
+            } else {
+                newStatus = 0;
+            }
+            
+            state.selections[state.currentMember][optionId] = newStatus;
+            
+            // 如果选择了"大宴群臣"，添加动画效果
+            if (optionId === 11 && newStatus === 1) {
+                const optionCard = document.querySelector(`.option-card[data-id="11"]`);
+                optionCard.classList.add('feast-selected');
+                setTimeout(() => {
+                    optionCard.classList.remove('feast-selected');
+                }, 1000);
+            }
+            
+            renderOptions();
+        }
+        
+        // 清空当前选择
+        function clearSelection() {
+            if (!state.currentMember) return;
+            
+            if (state.selections[state.currentMember]) {
+                state.selections[state.currentMember] = {};
+                renderOptions();
+            }
+        }
+        
+        // 保存选择
+        async function saveSelection() {
+            if (!state.currentMember) return;
+            
+            // 检查是否至少选择了一个选项
+            const hasSelection = state.selections[state.currentMember] && 
+                                 Object.values(state.selections[state.currentMember]).some(val => val !== 0);
+            
+            if (!hasSelection) {
+                alert('请至少选择一个选项！');
+                return;
+            }
+            
+            // 检查是否选择了"大宴群臣"
+            const feastSelected = state.selections[state.currentMember][11] === 1;
+            
+            // 更新参与人数（确保不重复计数）
+            const prevParticipants = state.participants;
+            const alreadyParticipated = state.selections[state.currentMember] && 
+                                       state.selections[state.currentMember].hasOwnProperty('submitted');
+            
+            if (!alreadyParticipated) {
+                state.participants++;
+            }
+            
+            // 标记为已提交
+            state.selections[state.currentMember].submitted = true;
+            
+            // 如果选择了"大宴群臣"，记录并触发庆祝
+            if (feastSelected) {
+                state.feastHost = state.currentMember;
+                showCelebration();
+            }
+            
+            // 保存到云端
+            const saveSuccess = await saveToCloud();
+            
+            if (saveSuccess) {
+                // 提示用户
+                const member = members.find(m => m.id === state.currentMember);
+                alert(`${member.name}的选择已保存！`);
+                
+                // 更新UI
+                updateParticipantsCount();
+                renderMembers();
+                renderOptions();
+            }
+        }
+        
+        // 显示庆祝界面
+        function showCelebration() {
+            // 创建庆祝层
+            const overlay = document.createElement('div');
+            overlay.className = 'celebration-overlay';
+            
+            const hostName = members.find(m => m.id === state.feastHost).name;
+            
+            // 创建庆祝内容
+            overlay.innerHTML = `
+                <div class="celebration-content">
+                    <h1 class="celebration-title">普天同庆！</h1>
+                    <div class="host-name">${hostName}</div>
+                    <h2 class="celebration-subtitle">大宴群臣！</h2>
+                    <p class="celebration-message">今日${hostName}设宴款待群臣，无需再做选择！</p>
+                    <button class="close-btn">关闭</button>
+                </div>
+            `;
+            
+            // 添加关闭按钮事件
+            const closeBtn = overlay.querySelector('.close-btn');
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+            });
+            
+            // 添加彩色纸屑效果
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                confetti.style.backgroundColor = getRandomColor();
+                overlay.appendChild(confetti);
+            }
+            
+            document.body.appendChild(overlay);
+        }
+        
+        // 获取随机颜色（用于纸屑）
+        function getRandomColor() {
+            const colors = ['#FFD700', '#FF4500', '#32CD32', '#1E90FF', '#8A2BE2', '#FF1493'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        // 更新参与人数
+        function updateParticipantsCount() {
+            document.getElementById('participants-count').textContent = state.participants;
+        }
+        
+        // 计算并显示结果
+        function calculateResults() {
+            if (state.feastHost) {
+                const container = document.getElementById('results-container');
+                const hostName = members.find(m => m.id == state.feastHost).name;
+                
+                container.innerHTML = `
+                    <div class="result-section">
+                        <div class="result-header">
+                            <div class="result-icon best-icon">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <div class="result-title">今日盛宴</div>
+                        </div>
+                        <div class="result-items">
+                            <div class="result-item result-best-item" style="flex: 1; max-width: 100%;">
+                                <div class="result-item-name" style="font-size: 1.5rem; margin-bottom: 10px;">大宴群臣！</div>
+                                <div class="result-item-stats">
+                                    <div style="font-size: 1.2rem;">${hostName}设宴款待群臣</div>
+                                    <div style="margin-top: 15px; font-size: 1.1rem;">今日无需选择，等待开宴！</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (state.participants < 2) {
+                alert('需要至少两人参与才能计算结果！');
+                return;
+            }
+            
+            // 计算每个选项的统计
+            const optionStats = {};
+            
+            options.forEach(option => {
+                optionStats[option.id] = {
+                    id: option.id,
+                    name: option.name,
+                    want: 0,
+                    dontWant: 0,
+                    neutral: 0
+                };
+            });
+            
+            // 遍历所有成员的选择
+            Object.keys(state.selections).forEach(memberId => {
+                const selections = state.selections[memberId];
+                
+                // 只计算已提交的成员
+                if (selections.submitted) {
+                    options.forEach(option => {
+                        const status = selections[option.id] || 0;
+                        
+                        if (status === 1) {
+                            optionStats[option.id].want++;
+                        } else if (status === -1) {
+                            optionStats[option.id].dontWant++;
+                        } else {
+                            optionStats[option.id].neutral++;
+                        }
+                    });
+                }
+            });
+            
+            // 找出所有人都能接受的选项（没有不想吃的投票）
+            const acceptableOptions = Object.values(optionStats).filter(
+                option => option.dontWant === 0
+            );
+            
+            // 找出最优推荐（可接受且想吃人数最多的选项）
+            let bestOption = null;
+            if (acceptableOptions.length > 0) {
+                bestOption = acceptableOptions.reduce((prev, current) => {
+                    return (prev.want > current.want) ? prev : current;
+                });
+            }
+            
+            // 显示结果
+            displayResults(acceptableOptions, bestOption);
+        }
+        
+        // 显示结果
+        function displayResults(acceptableOptions, bestOption) {
+            const container = document.getElementById('results-container');
+            
+            if (acceptableOptions.length === 0) {
+                container.innerHTML = `
+                    <div class="no-result">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px; color: #f44336;"></i>
+                        <h3>没有找到所有人都能接受的选项</h3>
+                        <p>请调整选择或考虑分开就餐</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="result-section">
+                    <div class="result-header">
+                        <div class="result-icon acceptable-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="result-title">可接受选项 (${acceptableOptions.length})</div>
+                    </div>
+                    <div class="result-items">
+            `;
+            
+            acceptableOptions.forEach(option => {
+                html += `
+                    <div class="result-item ${bestOption && option.id === bestOption.id ? 'result-best-item' : ''}">
+                        <div class="result-item-name">${option.name}</div>
+                        <div class="result-item-stats">
+                            <span style="color: #4CAF50;">${option.want}人想吃</span><br>
+                            <span>${option.neutral}人无意见</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            if (bestOption) {
+                html += `
+                    <div class="result-section">
+                        <div class="result-header">
+                            <div class="result-icon best-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="result-title">今日最佳推荐</div>
+                        </div>
+                        <div class="result-items">
+                            <div class="result-item result-best-item" style="flex: 1; max-width: 100%;">
+                                <div class="result-item-name" style="font-size: 1.5rem; margin-bottom: 10px;">${bestOption.name}</div>
+                                <div class="result-item-stats">
+                                    <div><span style="color: #4CAF50; font-size: 1.2rem;">${bestOption.want}人想吃</span></div>
+                                    <div>${bestOption.neutral}人无意见</div>
+                                    <div style="margin-top: 15px; font-size: 1.1rem;">所有人都能接受的选择！</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 初始化应用
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
